@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>③ 역사와 문명</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{
+    --terra:#B85042;--terra-dk:#8E3B30;--sage:#7A9B76;--sage-dk:#5C7A58;
+    --sand:#EAE3D7;--ink:#3A2E28;--paper:#FBF8F3;--muted:#A89B8C;
+  }
+  html,body{margin:0;padding:0;font-family:'Nanum Gothic',sans-serif;background:var(--paper);}
+  #wrap{position:relative;height:100vh;width:100vw;}
+  #map{height:100%;width:100%;}
+  .titlecard{position:absolute;top:18px;left:18px;z-index:1000;background:var(--paper);
+    border:2px solid var(--terra);border-radius:12px;padding:14px 18px;max-width:440px;
+    box-shadow:0 4px 14px rgba(58,46,40,.18);}
+  .titlecard h1{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--terra-dk);}
+  .titlecard p{margin:0;font-size:13px;color:var(--ink);line-height:1.5;}
+  .legend{position:absolute;bottom:24px;right:18px;z-index:1000;background:var(--paper);
+    border:2px solid var(--terra);border-radius:12px;padding:12px 16px;font-size:13px;
+    color:var(--ink);box-shadow:0 4px 14px rgba(58,46,40,.18);}
+  .legend .row{display:flex;align-items:center;margin:5px 0;}
+  .legend .dot{width:14px;height:14px;border-radius:50%;margin-right:9px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);}
+  .pin-marker{width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+    background:var(--terra);border:2px solid #fff;box-shadow:0 2px 6px rgba(58,46,40,.35);}
+  .leaflet-popup-content{font-family:'Nanum Gothic',sans-serif;font-size:13px;color:var(--ink);line-height:1.5;}
+  .leaflet-popup-content b{color:var(--terra-dk);}
+  .leaflet-popup-content ul{margin:5px 0 0;padding-left:18px;}
+
+  /* Leaflet tooltip 라벨 스타일 */
+  .leaflet-tooltip.pin-tt {
+    background: var(--terra);
+    color: #fff;
+    font-family: 'Nanum Gothic', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 3px 9px;
+    border-radius: 7px;
+    border: 1.5px solid #fff;
+    box-shadow: 0 2px 6px rgba(58,46,40,.30);
+    white-space: nowrap;
+  }
+  .leaflet-tooltip.pin-tt::before { display:none; }
+  .leaflet-tooltip.pin-tt-ref {
+    background: var(--muted);
+    color: #fff;
+    font-family: 'Nanum Gothic', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 3px 9px;
+    border-radius: 7px;
+    border: 1.5px solid #fff;
+    box-shadow: 0 2px 6px rgba(58,46,40,.25);
+    white-space: nowrap;
+  }
+  .leaflet-tooltip.pin-tt-ref::before { display:none; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="titlecard">
+    <h1>③ 역사와 문명</h1>
+    <p>고대 그리스·로마부터 비잔틴·오스만까지<br>문명의 교차점을 따라 (핀을 클릭하면 세부 방문지)</p>
+  </div>
+  <div class="legend">
+    <div class="row"><span class="dot" style="background:var(--terra)"></span>역사·문명 방문지</div>
+  </div>
+  <div id="map"></div>
+</div>
+<script>
+const map = L.map('map').setView([39.3, 28.0], 7);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19, subdomains:'abcd'
+}).addTo(map);
+
+// 지방 거점 도시 [이름, 위도, 경도, 팝업내용, 라벨방향, offset]
+const sites = [
+  ["파묵칼레 석회붕", 37.9203, 29.1187, "<b>파묵칼레 석회붕</b><br>세계자연유산 · 석회층 온천", 'right', [10,0]],
+  ["히에라폴리스", 37.9264, 29.1281, "<b>히에라폴리스</b><br>고대 로마 도시 · 빌립 순교터", 'bottom', [0,10]],
+  ["트로이", 39.9576, 26.2389, "<b>트로이 유적</b><br>호메로스 일리아스의 무대", 'left', [-10,0]],
+  ["1915 차낙칼레 대교", 40.1953, 26.4042, "<b>1915 차낙칼레 대교</b><br>세계 최장 현수교", 'left', [-10,0]]
+];
+
+sites.forEach(s => {
+  L.marker([s[1],s[2]], {icon:L.divIcon({className:'',
+    html:'<div class="pin-marker"></div>', iconSize:[22,22], iconAnchor:[11,22]})})
+    .addTo(map).bindPopup(s[3])
+    .bindTooltip(s[0], {permanent:true, direction:s[4], offset:s[5], className:'pin-tt'});
+});
+
+// 이스탄불 세부 방문지 7곳 [이름, 위도, 경도, 설명, 라벨방향, offset]
+const istanbul = [
+  ["보스포러스 해협 유람선", 41.0175, 28.9740, "유람선 선착장(에미뇌뉘 부근)", 'left', [-10,0]],
+  ["히포드럼 광장", 41.0058, 28.9752, "고대 전차 경기장 터 · 술탄아흐메트 광장", 'bottom', [0,10]],
+  ["성 소피아 사원", 41.0086, 28.9802, "비잔틴 건축의 정수 · 교회→모스크→박물관", 'right', [10,0]],
+  ["블루 모스크", 41.0054, 28.9768, "여섯 첨탑의 술탄아흐메트 모스크", 'bottom', [0,10]],
+  ["발랏 지구", 41.0292, 28.9490, "옛 유대인·그리스인 거주지 · 성 요르고스 성당", 'top', [0,-10]],
+  ["그랜드 바자르", 41.0108, 28.9680, "세계 최대 규모의 고대 전통 시장", 'top', [0,-10]],
+  ["탁심 / 이스티클랄 거리", 41.0370, 28.9850, "현대 이스탄불의 중심 번화가", 'right', [10,0]]
+];
+
+istanbul.forEach(s => {
+  L.marker([s[1],s[2]], {icon:L.divIcon({className:'',
+    html:'<div class="pin-marker"></div>', iconSize:[22,22], iconAnchor:[11,22]})})
+    .addTo(map).bindPopup(`<b>${s[0]}</b><br>${s[3]}`)
+    .bindTooltip(s[0], {permanent:true, direction:s[4], offset:s[5], className:'pin-tt'});
+});
+
+map.fitBounds([...sites, ...istanbul].map(s=>[s[1],s[2]]), {padding:[80,80]});
+</script>
+</body>
+</html>

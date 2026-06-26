@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>② 소아시아 일곱 교회</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+<style>
+  :root{
+    --terra:#B85042;--terra-dk:#8E3B30;--sage:#7A9B76;--sage-dk:#5C7A58;
+    --sand:#EAE3D7;--ink:#3A2E28;--paper:#FBF8F3;--muted:#A89B8C;
+  }
+  html,body{margin:0;padding:0;font-family:'Nanum Gothic',sans-serif;background:var(--paper);}
+  #wrap{position:relative;height:100vh;width:100vw;}
+  #map{height:100%;width:100%;}
+  .titlecard{position:absolute;top:18px;left:18px;z-index:1000;background:var(--paper);
+    border:2px solid var(--terra);border-radius:12px;padding:14px 18px;max-width:440px;
+    box-shadow:0 4px 14px rgba(58,46,40,.18);}
+  .titlecard h1{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--terra-dk);}
+  .titlecard p{margin:0;font-size:13px;color:var(--ink);line-height:1.5;}
+  .infobox{position:absolute;bottom:24px;left:18px;z-index:1000;background:var(--paper);
+    border:2px solid var(--sage);border-radius:12px;padding:12px 16px;max-width:360px;
+    font-size:12.5px;color:var(--ink);line-height:1.55;box-shadow:0 4px 14px rgba(58,46,40,.18);}
+  .legend{position:absolute;bottom:24px;right:18px;z-index:1000;background:var(--paper);
+    border:2px solid var(--terra);border-radius:12px;padding:12px 16px;font-size:13px;
+    color:var(--ink);box-shadow:0 4px 14px rgba(58,46,40,.18);}
+  .legend .row{display:flex;align-items:center;margin:5px 0;}
+  .legend .dot{width:14px;height:14px;border-radius:50%;margin-right:9px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);}
+  .legend .line{width:26px;height:0;margin-right:9px;border-top:3px dashed var(--terra);}
+  .pin-marker{width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+    border:2px solid #fff;box-shadow:0 2px 6px rgba(58,46,40,.35);}
+  .pin-marker.visit{background:var(--terra);}
+  .pin-marker.ref{background:var(--muted);width:17px;height:17px;}
+  .leaflet-popup-content{font-family:'Nanum Gothic',sans-serif;font-size:13px;color:var(--ink);}
+  .leaflet-popup-content b{color:var(--terra-dk);}
+
+  /* Leaflet tooltip 라벨 스타일 */
+  .leaflet-tooltip.pin-tt {
+    background: var(--terra);
+    color: #fff;
+    font-family: 'Nanum Gothic', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 3px 9px;
+    border-radius: 7px;
+    border: 1.5px solid #fff;
+    box-shadow: 0 2px 6px rgba(58,46,40,.30);
+    white-space: nowrap;
+  }
+  .leaflet-tooltip.pin-tt::before { display:none; }
+  .leaflet-tooltip.pin-tt-ref {
+    background: var(--muted);
+    color: #fff;
+    font-family: 'Nanum Gothic', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    padding: 3px 9px;
+    border-radius: 7px;
+    border: 1.5px solid #fff;
+    box-shadow: 0 2px 6px rgba(58,46,40,.25);
+    white-space: nowrap;
+  }
+  .leaflet-tooltip.pin-tt-ref::before { display:none; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="titlecard">
+    <h1>② 소아시아 일곱 교회</h1>
+    <p>요한계시록 2~3장의 일곱 교회<br>진한 핀이 이번 연수에서 방문하는 4곳입니다</p>
+  </div>
+  <div class="infobox">
+    요한계시록에 기록된 순서(점선)는 당시 로마의 우편 도로를 따라 시계방향으로 이어집니다.
+    우리는 그중 <b>에베소·서머나·버가모·라오디게아</b> 네 곳을 방문합니다.
+  </div>
+  <div class="legend">
+    <div class="row"><span class="dot" style="background:var(--terra)"></span>방문지 (4곳)</div>
+    <div class="row"><span class="dot" style="background:var(--muted)"></span>미방문 교회 (3곳)</div>
+    <div class="row"><span class="line"></span>계시록 기록 순서</div>
+  </div>
+  <div id="map"></div>
+</div>
+<script>
+const map = L.map('map').setView([38.4, 28.0], 8);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19, subdomains:'abcd'
+}).addTo(map);
+
+const TERRA='#B85042';
+
+// 일곱 교회 [이름, 위도, 경도, 방문여부, 설명]
+const churches = [
+  ["에베소", 37.9410, 27.3419, true, "사랑을 잃은 교회 (계 2장)"],
+  ["서머나", 38.4189, 27.1287, true, "폴리캅 순교 / 고난받는 교회 (계 2장)"],
+  ["버가모", 39.1213, 27.1836, true, "사탄의 권좌가 있는 곳 (계 2장)"],
+  ["두아디라", 38.9208, 27.8430, false, "거짓 선지자를 용납한 교회 (계 2장)"],
+  ["사데", 38.4882, 28.0400, false, "살았으나 죽은 교회 (계 3장)"],
+  ["빌라델비아", 38.3500, 28.5167, false, "충성을 인정받은 교회 (계 3장)"],
+  ["라오디게아", 37.8361, 29.1078, true, "미지근한 교회 (계 3장)"]
+];
+
+function pin(lat,lng,name,desc,isVisit,dx,dy){
+  const cls = isVisit?'visit':'ref'; const sz = isVisit?22:17;
+  L.marker([lat,lng], {icon:L.divIcon({className:'',
+    html:`<div class="pin-marker ${cls}"></div>`, iconSize:[sz,sz], iconAnchor:[sz/2,sz]})})
+    .addTo(map).bindPopup(`<b>${name}</b><br>${desc}`)
+    .bindTooltip(name, {permanent:true, direction:'right', offset:[8,-12], className: isVisit ? 'pin-tt' : 'pin-tt-ref'});
+
+}
+churches.forEach(c => pin(c[1],c[2],c[0],c[4],c[3],-8,28));
+
+// 계시록 순서 점선 + 화살표
+const order = churches.map(c=>[c[1],c[2]]);
+const pl = L.polyline(order, {color:TERRA, weight:2.5, opacity:0.75, dashArray:'7,7'}).addTo(map);
+L.polylineDecorator(pl, {patterns:[{offset:'5%', repeat:'12%',
+  symbol:L.Symbol.arrowHead({pixelSize:9, polygon:true,
+    pathOptions:{stroke:false, fill:true, fillColor:TERRA, fillOpacity:0.85}})}]}).addTo(map);
+
+map.fitBounds(order, {padding:[70,70]});
+</script>
+</body>
+</html>

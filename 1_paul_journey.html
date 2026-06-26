@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>① 사도 바울의 전도 여행</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&display=swap" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet.polylineDecorator.js"></script>
+<style>
+  :root{
+    --terra:#B85042;--terra-dk:#8E3B30;--sage:#7A9B76;--sage-dk:#5C7A58;
+    --sand:#EAE3D7;--ink:#3A2E28;--paper:#FBF8F3;--muted:#A89B8C;
+    --j1:#C77B3A;   /* 1차: 황토 주황 */
+    --j2:#5C7A58;   /* 2차: 세이지 그린 */
+    --j3:#4A6E8A;   /* 3차: 청회색 블루 */
+  }
+  html,body{margin:0;padding:0;font-family:'Nanum Gothic',sans-serif;background:var(--paper);}
+  #wrap{position:relative;height:100vh;width:100vw;}
+  #map{height:100%;width:100%;}
+  .titlecard{position:absolute;top:18px;left:18px;z-index:1000;background:var(--paper);
+    border:2px solid var(--terra);border-radius:12px;padding:14px 18px;max-width:430px;
+    box-shadow:0 4px 14px rgba(58,46,40,.18);}
+  .titlecard h1{margin:0 0 4px;font-size:19px;font-weight:800;color:var(--terra-dk);}
+  .titlecard p{margin:0;font-size:12.5px;color:var(--ink);line-height:1.5;}
+  .legend{position:absolute;bottom:24px;right:18px;z-index:1000;background:var(--paper);
+    border:2px solid var(--terra);border-radius:12px;padding:12px 16px;font-size:12.5px;
+    color:var(--ink);box-shadow:0 4px 14px rgba(58,46,40,.18);}
+  .legend .row{display:flex;align-items:center;margin:5px 0;}
+  .legend .line{width:28px;height:0;margin-right:9px;}
+  .legend .star{margin-right:9px;font-size:15px;}
+  .legend .dot{width:13px;height:13px;border-radius:50%;margin-right:9px;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15);}
+  .leaflet-tooltip.pin-tt{background:var(--terra);color:#fff;font-family:'Nanum Gothic',sans-serif;
+    font-weight:700;font-size:12px;padding:3px 9px;border-radius:7px;border:1.5px solid #fff;
+    box-shadow:0 2px 6px rgba(58,46,40,.30);white-space:nowrap;}
+  .leaflet-tooltip.pin-tt::before{display:none;}
+  .leaflet-tooltip.pin-tt-ref{background:#fff;color:var(--ink);font-family:'Nanum Gothic',sans-serif;
+    font-weight:700;font-size:11px;padding:2px 7px;border-radius:6px;border:1.5px solid var(--muted);
+    box-shadow:0 1px 4px rgba(58,46,40,.20);white-space:nowrap;}
+  .leaflet-tooltip.pin-tt-ref::before{display:none;}
+  .leaflet-popup-content{font-family:'Nanum Gothic',sans-serif;font-size:13px;color:var(--ink);line-height:1.5;}
+  .leaflet-popup-content b{color:var(--terra-dk);}
+  .star-icon{font-size:22px;line-height:22px;text-align:center;
+    text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;}
+  .ctrl{position:absolute;top:18px;right:18px;z-index:1000;background:var(--paper);
+    border:2px solid var(--terra);border-radius:12px;padding:10px 14px;font-size:12.5px;
+    color:var(--ink);box-shadow:0 4px 14px rgba(58,46,40,.18);}
+  .ctrl label{display:block;margin:3px 0;cursor:pointer;}
+  .ctrl input{margin-right:6px;vertical-align:middle;}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div class="titlecard">
+    <h1>① 사도 바울의 전도 여행</h1>
+    <p>1·2·3차 전도여행의 주요 경로를 색으로 구분했습니다.<br>★ 표시가 이번 연수에서 방문하는 곳입니다. (핀 클릭 시 설명)</p>
+  </div>
+  <div class="ctrl">
+    <label><input type="checkbox" id="c1" checked> 1차 전도여행</label>
+    <label><input type="checkbox" id="c2" checked> 2차 전도여행</label>
+    <label><input type="checkbox" id="c3" checked> 3차 전도여행</label>
+  </div>
+  <div class="legend">
+    <div class="row"><span class="line" style="border-top:3px solid var(--j1)"></span>1차 (행 13~14장)</div>
+    <div class="row"><span class="line" style="border-top:3px solid var(--j2)"></span>2차 (행 15~18장)</div>
+    <div class="row"><span class="line" style="border-top:3px solid var(--j3)"></span>3차 (행 18~21장)</div>
+    <div class="row"><span class="star">★</span>이번 연수 방문지</div>
+    <div class="row"><span class="dot" style="background:var(--muted)"></span>경유·주요 도시</div>
+  </div>
+  <div id="map"></div>
+</div>
+<script>
+const map = L.map('map').setView([38.5, 30.0], 6);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19, subdomains:'abcd'
+}).addTo(map);
+
+const J1='#C77B3A', J2='#5C7A58', J3='#4A6E8A', TERRA='#B85042', MUTED='#A89B8C';
+
+// 도시 좌표 [위도, 경도]
+const P = {
+  "수리아 안디옥":[36.2021,36.1604],
+  "셀루기아":[36.1217,35.9267],
+  "살라미(구브로)":[35.1856,33.9000],
+  "바보(구브로)":[34.7571,32.4067],
+  "버가":[36.9614,30.8536],
+  "비시디아 안디옥":[38.3050,31.1894],
+  "이고니온":[37.8716,32.4847],
+  "루스드라":[37.5800,32.4500],
+  "더베":[37.3500,33.2667],
+  "앗달리아":[36.8841,30.7056],
+  "드로아":[39.7997,26.1593],
+  "네압볼리":[40.9419,24.4047],
+  "빌립보":[41.0136,24.2876],
+  "데살로니가":[40.6403,22.9444],
+  "베뢰아":[40.5236,22.2028],
+  "아덴":[37.9838,23.7275],
+  "고린도":[37.9061,22.8786],
+  "겐그레아":[37.8861,22.9889],
+  "에베소":[37.9410,27.3419],
+  "밀레도":[37.5306,27.2786],
+  "앗소":[39.4900,26.3380],
+  "미둘레네":[39.1100,26.5550],
+  "히에라볼리":[37.9248,29.1265],
+  "골로새":[37.7900,29.2600],
+  "라오디게아":[37.8361,29.1078],
+  "가이사랴":[32.5000,34.8917],
+  "예루살렘":[31.7683,35.2137],
+  "다소":[36.9177,34.8950]
+};
+
+// 이번 연수 방문지 (★)
+const VISIT = {
+  "비시디아 안디옥":"1차 전도여행 거점 · 이방인 첫 복음 (행 13장)",
+  "에베소":"3차 때 3년 사역 · 두란노 서원 강론 (행 19장)",
+  "밀레도":"에베소 장로들과 고별 설교 (행 20장)",
+  "드로아":"마게도냐 환상 · 유두고를 살림 (행 16·20장)",
+  "앗소":"바울이 홀로 걸어서 도착한 항구 (행 20장)",
+  "히에라볼리":"골로새서에 언급된 교회 (골 4:13)",
+  "골로새":"골로새서의 무대",
+  "라오디게아":"미지근한 교회 · 계시록 일곱 교회 (계 3장)"
+};
+
+// 차수별 경로 (순서대로)
+const routes = {
+  j1: {color:J1, path:[
+    "수리아 안디옥","셀루기아","살라미(구브로)","바보(구브로)","버가",
+    "비시디아 안디옥","이고니온","루스드라","더베",
+    "루스드라","이고니온","비시디아 안디옥","버가","앗달리아","수리아 안디옥"
+  ]},
+  j2: {color:J2, path:[
+    "수리아 안디옥","다소","더베","루스드라","이고니온","비시디아 안디옥",
+    "드로아","네압볼리","빌립보","데살로니가","베뢰아","아덴","고린도",
+    "겐그레아","에베소","가이사랴","예루살렘","수리아 안디옥"
+  ]},
+  j3: {color:J3, path:[
+    "수리아 안디옥","다소","이고니온","에베소","드로아","빌립보","고린도",
+    "빌립보","드로아","앗소","미둘레네","밀레도","가이사랴","예루살렘"
+  ]}
+};
+
+const layers = {};
+function drawRoute(key){
+  const r = routes[key];
+  const grp = L.layerGroup();
+  const pts = r.path.map(n => P[n]);
+  const pl = L.polyline(pts, {color:r.color, weight:3, opacity:0.85}).addTo(grp);
+  L.polylineDecorator(pl, {patterns:[{offset:'4%', repeat:'9%',
+    symbol:L.Symbol.arrowHead({pixelSize:9, polygon:true,
+      pathOptions:{stroke:false, fill:true, fillColor:r.color, fillOpacity:0.9}})}]}).addTo(grp);
+  grp.addTo(map);
+  layers[key] = grp;
+}
+drawRoute('j1'); drawRoute('j2'); drawRoute('j3');
+
+// 도시 핀: 방문지는 ★, 나머지는 작은 점
+// 가까이 몰린 방문지는 라벨 방향을 따로 지정 (히에라볼리/골로새/라오디게아)
+const LABEL_DIR = {
+  "히에라볼리": {direction:'top',    offset:[0,-8]},
+  "라오디게아": {direction:'left',   offset:[-10,0]},
+  "골로새":     {direction:'bottom', offset:[0,8]}
+};
+const placed = new Set();
+function addCity(name){
+  if(placed.has(name)) return;
+  placed.add(name);
+  const [lat,lng] = P[name];
+  if(VISIT[name]){
+    const lbl = LABEL_DIR[name] || {direction:'right', offset:[10,0]};
+    // 별 아이콘
+    L.marker([lat,lng], {icon:L.divIcon({className:'',
+      html:`<div class="star-icon" style="color:${TERRA}">★</div>`,
+      iconSize:[22,22], iconAnchor:[11,11]}), zIndexOffset:1000})
+      .addTo(map).bindPopup(`<b>${name}</b><br>${VISIT[name]}`)
+      .bindTooltip(name, {permanent:true, direction:lbl.direction, offset:lbl.offset, className:'pin-tt'});
+  } else {
+    L.circleMarker([lat,lng], {radius:4, color:'#fff', weight:1.5,
+      fillColor:MUTED, fillOpacity:1})
+      .addTo(map).bindPopup(`<b>${name}</b>`)
+      .bindTooltip(name, {permanent:true, direction:'right', offset:[6,0], className:'pin-tt-ref'});
+  }
+}
+// 모든 경로의 도시 표시
+Object.values(routes).forEach(r => r.path.forEach(addCity));
+// 경로에 포함되지 않는 연수 방문지(바울 서신에 언급된 교회들)도 별도 표시
+Object.keys(VISIT).forEach(addCity);
+
+// 체크박스 토글
+function bind(id, key){
+  document.getElementById(id).addEventListener('change', e=>{
+    if(e.target.checked) layers[key].addTo(map);
+    else map.removeLayer(layers[key]);
+  });
+}
+bind('c1','j1'); bind('c2','j2'); bind('c3','j3');
+
+map.fitBounds(Object.values(P), {padding:[60,60]});
+</script>
+</body>
+</html>
