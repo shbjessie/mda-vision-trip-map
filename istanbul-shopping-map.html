@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MDA 2026 이스탄불 쇼핑 동선 지도</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Noto Sans KR', -apple-system, sans-serif; background: #f5f5f0; }
+#map { width: 100%; height: 75vh; min-height: 500px; border-bottom: 3px solid #c0392b; }
+.header { background: #1a1a2e; color: #fff; padding: 12px 16px; text-align: center; }
+.header h1 { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+.header p { font-size: 12px; color: #aaa; }
+.legend { padding: 10px 16px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; font-size: 12px; background: #fff; border-bottom: 1px solid #e5e5e5; }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.popup-title { font-size: 15px; font-weight: 700; margin-bottom: 6px; color: #1a1a2e; line-height: 1.3; }
+.popup-addr { font-size: 11px; color: #888; margin-bottom: 8px; }
+.popup-section { font-size: 12px; font-weight: 700; color: #c0392b; margin: 8px 0 4px; border-bottom: 1px solid #eee; padding-bottom: 3px; }
+.popup-item { font-size: 12px; line-height: 1.6; color: #333; }
+.popup-price { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dotted #eee; font-size: 12px; }
+.popup-price .name { color: #333; max-width: 55%; }
+.popup-price .price { color: #c0392b; font-weight: 700; text-align: right; }
+.popup-tip { font-size: 11px; color: #666; background: #fffde7; padding: 6px 8px; border-radius: 4px; margin-top: 8px; line-height: 1.5; }
+.popup-hours { font-size: 11px; color: #2563eb; margin-top: 4px; }
+.tab-bar { display: flex; justify-content: center; gap: 8px; padding: 10px 16px; background: #fff; }
+.tab-btn { padding: 6px 16px; border: 1.5px solid #c0392b; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; background: #fff; color: #c0392b; transition: all 0.2s; }
+.tab-btn.active, .tab-btn:hover { background: #c0392b; color: #fff; }
+.rate-bar { display: flex; justify-content: center; gap: 12px; padding: 6px; font-size: 11px; color: #666; background: #fafafa; }
+.rate-bar span { background: #f0f0f0; padding: 2px 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🇹🇷 MDA 2026 이스탄불 쇼핑 동선 지도</h1>
+  <p>이스티클랄 거리 + 그랜드 바자르 | 핀을 눌러 품목·가격 확인</p>
+</div>
+
+<div class="rate-bar">
+  <span>$1 ≈ 46.8 TRY</span>
+  <span>$1 ≈ 1,530원</span>
+  <span>1 TRY ≈ 33원</span>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" onclick="showRoute('istiklal')">🚶 이스티클랄 (2h30m)</button>
+  <button class="tab-btn" onclick="showRoute('bazaar')">🏛️ 그랜드 바자르 (1h)</button>
+  <button class="tab-btn" onclick="showRoute('all')">📍 전체 보기</button>
+</div>
+
+<div class="legend">
+  <span><span class="dot" style="background:#e74c3c;"></span>필수 맛집</span>
+  <span><span class="dot" style="background:#2563eb;"></span>기념품 쇼핑</span>
+  <span><span class="dot" style="background:#16a34a;"></span>출발/복귀 지점</span>
+  <span>━━ 추천 동선</span>
+</div>
+
+<div id="map"></div>
+
+<script>
+const map = L.map('map', { zoomControl: true }).setView([41.025, 28.975], 14);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap',
+  maxZoom: 19
+}).addTo(map);
+
+function icon(color, label) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      background:${color}; color:#fff; width:28px; height:28px;
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:13px; font-weight:800; border:2.5px solid #fff;
+      box-shadow:0 2px 6px rgba(0,0,0,0.35);
+    ">${label}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -16]
+  });
+}
+
+// === 이스티클랄 데이터 ===
+const istiklalStops = [
+  {
+    lat: 41.0370, lng: 28.9851, color: '#16a34a', label: 'S',
+    popup: `
+      <div class="popup-title">① 탁심 광장 (출발)</div>
+      <div class="popup-addr">Taksim Meydanı, Beyoğlu</div>
+      <div class="popup-item">이스티클랄 거리의 북쪽 시작점.<br>여기서 남쪽(튀넬 방향)으로 내리막 도보.</div>
+      <div class="popup-tip">💡 T1 트램 또는 M2 메트로 탁심역 하차. 공화국 기념비 앞에서 집결 후 출발.</div>
+    `
+  },
+  {
+    lat: 41.0359, lng: 28.9835, color: '#e74c3c', label: '②',
+    popup: `
+      <div class="popup-title">② 하피즈 무스타파 1864 이스티클랄점</div>
+      <div class="popup-addr">İstiklal Cd. No:37, Beyoğlu (24시간 영업)</div>
+      <div class="popup-section">꼭 사야 할 것 & 가격</div>
+      <div class="popup-price"><span class="name">로쿰 혼합 500g 캔</span><span class="price">750~1,250 TL<br>$16~27 / 2.5~4.1만원</span></div>
+      <div class="popup-price"><span class="name">로쿰 혼합 1kg 캔</span><span class="price">1,500~2,500 TL<br>$32~53 / 5~8.1만원</span></div>
+      <div class="popup-price"><span class="name">바클라바 세트 500g</span><span class="price">750~1,500 TL<br>$16~32 / 2.5~5만원</span></div>
+      <div class="popup-price"><span class="name">쿠네페 1인분 (매장)</span><span class="price">200~350 TL<br>$4~7 / 6,600~1.2만원</span></div>
+      <div class="popup-tip">💡 브랜드 매장이라 흥정 불가, 대신 품질 보장. 진공포장으로 귀국 시 OK. 진열대 시식 적극 활용!</div>
+    `
+  },
+  {
+    lat: 41.0344, lng: 28.9798, color: '#e74c3c', label: '③',
+    popup: `
+      <div class="popup-title">③ 하피즈 무스타파 1864 페라점 (선택)</div>
+      <div class="popup-addr">İstiklal Cd. No:121, Beyoğlu (24시간 영업)</div>
+      <div class="popup-item">이스티클랄점보다 큰 매장. 4층 테라스에서 거리 전망 가능.<br>이스티클랄점에서 못 산 것 여기서 추가 구매 가능.</div>
+      <div class="popup-tip">💡 시간 여유 없으면 패스 가능. 두 지점 가격 동일.</div>
+    `
+  },
+  {
+    lat: 41.0285, lng: 28.9746, color: '#e74c3c', label: '④',
+    popup: `
+      <div class="popup-title">④ 하산 페흐미 외즈쉬트 1915</div>
+      <div class="popup-addr">İstiklal Cd. No:261, Beyoğlu</div>
+      <div class="popup-hours">🕐 08:30~22:00 (매일)</div>
+      <div class="popup-section">꼭 먹어야 할 것</div>
+      <div class="popup-price"><span class="name">카이막 + 꿀 세트</span><span class="price">250~350 TL<br>$5~7 / 8,300~1.2만원</span></div>
+      <div class="popup-item">물소 우유 클로티드 크림에 꿀을 올린 시그니처.<br>빵과 함께 제공. 현장 취식 전용.</div>
+      <div class="popup-tip">💡 매장이 작아서 5명 동시 입장 빡빡함. 오전 방문 추천. 평점 4.6 (3,900개 리뷰)</div>
+    `
+  },
+  {
+    lat: 41.0299, lng: 28.9753, color: '#e74c3c', label: '⑤',
+    popup: `
+      <div class="popup-title">⑤ 마도(MADO) 튀넬점</div>
+      <div class="popup-addr">İstiklal Cd. Gönül Sk. No:1, Beyoğlu</div>
+      <div class="popup-hours">🕐 07:30~01:30 (매일)</div>
+      <div class="popup-section">꼭 먹어야 할 것</div>
+      <div class="popup-price"><span class="name">마라쉬 돈드르마 1스쿱</span><span class="price">40~60 TL<br>$1~1.3 / 1,300~2,000원</span></div>
+      <div class="popup-price"><span class="name">카잔디비 (밀크 푸딩)</span><span class="price">120~180 TL<br>$2.6~3.8 / 4,000~5,900원</span></div>
+      <div class="popup-item">쫀득한 터키식 아이스크림. 아이스크림 장인의 장난 퍼포먼스 볼거리!</div>
+      <div class="popup-tip">💡 이스티클랄 관광지 지점이라 일반 마도보다 약간 비쌈. 그래도 한국 돈 2천원 이하!</div>
+    `
+  },
+  {
+    lat: 41.0273, lng: 28.9723, color: '#e74c3c', label: '⑥',
+    popup: `
+      <div class="popup-title">⑥ VK Champion Fish Wrap</div>
+      <div class="popup-addr">Büyük Hendek Cd. No:48/A, Beyoğlu (갈라타 타워 근처)</div>
+      <div class="popup-hours">🕐 10:00~02:00 (월요일만 12:00~)</div>
+      <div class="popup-section">꼭 먹어야 할 것</div>
+      <div class="popup-price"><span class="name">고등어 피시 랩 1개</span><span class="price">200~250 TL<br>$4~5 / 6,600~8,300원</span></div>
+      <div class="popup-item">눈앞에서 생선 그릴. 가시 제거해줌.<br>스모키하고 부드러운 맛. 평점 4.9!</div>
+      <div class="popup-tip">💡 이스티클랄에서 도보 5분 골목. 피시 스킨(껍질) 원하면 미리 요청. 갈라타 타워 전망과 함께!</div>
+    `
+  }
+];
+
+// === 그랜드 바자르 데이터 ===
+const bazaarStops = [
+  {
+    lat: 41.0101, lng: 28.9700, color: '#16a34a', label: 'S',
+    popup: `
+      <div class="popup-title">① 누루오스마니예 게이트 (출발/복귀)</div>
+      <div class="popup-addr">Nuruosmaniye Kapısı, Grand Bazaar</div>
+      <div class="popup-item">가장 대중적인 정문. 출발 시 타이머 시작.<br>정확히 60분 후 이곳에서 집합!</div>
+      <div class="popup-tip">💡 T1 트램 Çemberlitaş역에서 도보 2분. 게이트 앞 분수대가 랜드마크.</div>
+    `
+  },
+  {
+    lat: 41.0107, lng: 28.9681, color: '#2563eb', label: '②',
+    popup: `
+      <div class="popup-title">② Kalpakçılar Cd. (메인 도로)</div>
+      <div class="popup-addr">Grand Bazaar 중심 대로</div>
+      <div class="popup-item">금·은 보석 거리. 양쪽에 세라믹·조명 가게 산재.<br>가격 정찰만 하고 구매는 하지 마세요!</div>
+      <div class="popup-tip">💡 여기서 중간쯤 남쪽으로 빠지면 Takkeciler(세라믹), 북쪽은 Yağlıkçılar(직물).</div>
+    `
+  },
+  {
+    lat: 41.0104, lng: 28.9681, color: '#2563eb', label: '③',
+    popup: `
+      <div class="popup-title">③ İznik Works (세라믹 전문)</div>
+      <div class="popup-addr">Takkeciler Sk. 41-43 | ⭐ 4.9 (83 리뷰)</div>
+      <div class="popup-section">목표 흥정가 (상인 호가의 50~60%)</div>
+      <div class="popup-price"><span class="name">미니 종지 (낱개)</span><span class="price">140~190 TL<br>$3~4 / 4,600~6,300원</span></div>
+      <div class="popup-price"><span class="name">미니 종지 (5개 묶음)</span><span class="price">개당 120~140 TL<br>$2.5~3 / 4,000~4,600원</span></div>
+      <div class="popup-price"><span class="name">냄비 받침 (타일형)</span><span class="price">190~280 TL<br>$4~6 / 6,300~9,200원</span></div>
+      <div class="popup-tip">💡 손으로 그린 미세한 불규칙함 = 진짜 핸드메이드. 너무 완벽하면 공장 대량생산품!</div>
+    `
+  },
+  {
+    lat: 41.0110, lng: 28.9680, color: '#2563eb', label: '④',
+    popup: `
+      <div class="popup-title">④ 모자이크 조명 상점 구역</div>
+      <div class="popup-addr">Kavaflar Sk. 일대, Grand Bazaar</div>
+      <div class="popup-section">목표 흥정가</div>
+      <div class="popup-price"><span class="name">소형 램프 1구 (낱개)</span><span class="price">560~840 TL<br>$12~18 / 1.9~2.8만원</span></div>
+      <div class="popup-price"><span class="name">소형 램프 (5개 묶음)</span><span class="price">개당 470~700 TL<br>$10~15 / 1.6~2.3만원</span></div>
+      <div class="popup-price"><span class="name">중형 램프</span><span class="price">1,170~1,640 TL<br>$25~35 / 3.9~5.4만원</span></div>
+      <div class="popup-tip">💡 버블랩 2중 포장 + 전구 분리 필수 요청 (무료). 220V라 한국에서 바로 사용 OK.</div>
+    `
+  },
+  {
+    lat: 41.0122, lng: 28.9675, color: '#2563eb', label: '⑤',
+    popup: `
+      <div class="popup-title">⑤ Egin Textile (페슈테말 전문)</div>
+      <div class="popup-addr">Yağlıkçılar Cd. No:1 | ⭐ 4.6 (23 리뷰)</div>
+      <div class="popup-section">목표 흥정가</div>
+      <div class="popup-price"><span class="name">면 페슈테말 (낱개)</span><span class="price">230~370 TL<br>$5~8 / 7,600~1.2만원</span></div>
+      <div class="popup-price"><span class="name">면 페슈테말 (5장 묶음)</span><span class="price">개당 190~280 TL<br>$4~6 / 6,300~9,200원</span></div>
+      <div class="popup-price"><span class="name">로즈 오일 5~10ml</span><span class="price">230~370 TL<br>$5~8 / 7,600~1.2만원</span></div>
+      <div class="popup-price"><span class="name">올리브·로즈 비누 세트</span><span class="price">140~230 TL<br>$3~5 / 4,600~7,600원</span></div>
+      <div class="popup-tip">💡 할리우드 영화 '트로이' 의상에도 원단을 납품한 곳. 면·린넨 다양한 종류 보유.</div>
+    `
+  },
+  {
+    lat: 41.0127, lng: 28.9675, color: '#2563eb', label: '⑥',
+    popup: `
+      <div class="popup-title">⑥ 로쿰·바클라바 상점 구역</div>
+      <div class="popup-addr">Yağlıkçılar Cd. 33 일대</div>
+      <div class="popup-section">목표 흥정가 (바자르 가격 = 하피즈 무스타파의 1/3)</div>
+      <div class="popup-price"><span class="name">로쿰 혼합 500g 박스</span><span class="price">190~280 TL<br>$4~6 / 6,300~9,200원</span></div>
+      <div class="popup-price"><span class="name">피스타치오 로쿰 500g</span><span class="price">330~470 TL<br>$7~10 / 1.1~1.6만원</span></div>
+      <div class="popup-price"><span class="name">피스타치오 바클라바 1kg</span><span class="price">560~840 TL<br>$12~18 / 1.9~2.8만원</span></div>
+      <div class="popup-tip">💡 시식 적극 활용! 공장 박스보다 진열대에서 골라 담는 게 더 신선. 흥정 가능!</div>
+    `
+  }
+];
+
+// 루트 라인
+const istiklalRoute = istiklalStops.map(s => [s.lat, s.lng]);
+const bazaarRoute = bazaarStops.map(s => [s.lat, s.lng]);
+
+let istiklalMarkers = L.layerGroup();
+let bazaarMarkers = L.layerGroup();
+let istiklalLine = L.polyline(istiklalRoute, { color: '#e74c3c', weight: 4, opacity: 0.7, dashArray: '10,8' });
+let bazaarLine = L.polyline(bazaarRoute, { color: '#2563eb', weight: 4, opacity: 0.7, dashArray: '10,8' });
+
+istiklalStops.forEach(s => {
+  L.marker([s.lat, s.lng], { icon: icon(s.color, s.label) })
+    .bindPopup(s.popup, { maxWidth: 320, minWidth: 280 })
+    .addTo(istiklalMarkers);
+});
+
+bazaarStops.forEach(s => {
+  L.marker([s.lat, s.lng], { icon: icon(s.color, s.label) })
+    .bindPopup(s.popup, { maxWidth: 320, minWidth: 280 })
+    .addTo(bazaarMarkers);
+});
+
+// 초기 표시: 전체
+istiklalMarkers.addTo(map);
+bazaarMarkers.addTo(map);
+istiklalLine.addTo(map);
+bazaarLine.addTo(map);
+
+function showRoute(which) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  map.removeLayer(istiklalMarkers);
+  map.removeLayer(bazaarMarkers);
+  map.removeLayer(istiklalLine);
+  map.removeLayer(bazaarLine);
+
+  if (which === 'istiklal') {
+    istiklalMarkers.addTo(map);
+    istiklalLine.addTo(map);
+    map.fitBounds(istiklalLine.getBounds(), { padding: [40, 40] });
+  } else if (which === 'bazaar') {
+    bazaarMarkers.addTo(map);
+    bazaarLine.addTo(map);
+    map.fitBounds(bazaarLine.getBounds(), { padding: [60, 60] });
+  } else {
+    istiklalMarkers.addTo(map);
+    bazaarMarkers.addTo(map);
+    istiklalLine.addTo(map);
+    bazaarLine.addTo(map);
+    const all = [...istiklalRoute, ...bazaarRoute];
+    map.fitBounds(all, { padding: [40, 40] });
+  }
+}
+</script>
+
+</body>
+</html>
