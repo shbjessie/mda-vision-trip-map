@@ -48,6 +48,7 @@
     color:var(--ink);box-shadow:0 4px 14px rgba(58,46,40,.18);}
   .ctrl label{display:block;margin:3px 0;cursor:pointer;}
   .ctrl input{margin-right:6px;vertical-align:middle;}
+  .leaflet-tile-pane { filter: grayscale(1) brightness(1.08) contrast(0.85); }
 </style>
 </head>
 <body>
@@ -72,8 +73,8 @@
 </div>
 <script>
 const map = L.map('map').setView([38.5, 30.0], 6);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19, subdomains:'abcd'
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'&copy; OpenStreetMap contributors', maxZoom:19
 }).addTo(map);
 
 const J1='#C77B3A', J2='#5C7A58', J3='#4A6E8A', TERRA='#B85042', MUTED='#A89B8C';

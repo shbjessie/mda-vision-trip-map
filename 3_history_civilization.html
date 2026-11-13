@@ -58,6 +58,7 @@
     white-space: nowrap;
   }
   .leaflet-tooltip.pin-tt-ref::before { display:none; }
+  .leaflet-tile-pane { filter: grayscale(1) brightness(1.08) contrast(0.85); }
 </style>
 </head>
 <body>
@@ -73,8 +74,8 @@
 </div>
 <script>
 const map = L.map('map').setView([39.3, 28.0], 7);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19, subdomains:'abcd'
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'&copy; OpenStreetMap contributors', maxZoom:19
 }).addTo(map);
 
 // 지방 거점 도시 [이름, 위도, 경도, 팝업내용, 라벨방향, offset]

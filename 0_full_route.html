@@ -47,6 +47,7 @@
   .leaflet-tooltip.tt-hotel{background:var(--blue);}
   .leaflet-tooltip.tt-food{background:var(--gold);}
   .leaflet-tooltip.tt-air{background:var(--muted);}
+  .leaflet-tile-pane { filter: grayscale(1) brightness(1.08) contrast(0.85); }
 </style>
 </head>
 <body>
@@ -69,8 +70,8 @@
 </div>
 <script>
 const map = L.map('map').setView([39.3, 28.5], 7);
-L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-  attribution:'&copy; OpenStreetMap &copy; CARTO', maxZoom:19, subdomains:'abcd'
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution:'&copy; OpenStreetMap contributors', maxZoom:19
 }).addTo(map);
 
 const visits = [
